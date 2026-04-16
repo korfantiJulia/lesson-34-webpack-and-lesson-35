@@ -4,11 +4,14 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const ImageMinimizerPlugin = require("image-minimizer-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
+const ESLintPlugin = require("eslint-webpack-plugin");
+const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
 
 const isDev = process.env.NODE_ENV !== "production";
+const isAnalyze = process.env.npm_lifecycle_event === "analyze";
 
 module.exports = {
-  entry: "./src/index.js",
+  entry: "./src/index.ts",
 
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -26,7 +29,12 @@ module.exports = {
 
   module: {
     rules: [
-      // CSS → PostCSS → CSS
+      {
+        test: /\.(js|ts)$/,
+        exclude: /node_modules/,
+        use: "babel-loader",
+      },
+
       {
         test: /\.css$/,
         use: [
@@ -36,7 +44,6 @@ module.exports = {
         ],
       },
 
-      // SCSS → PostCSS → CSS
       {
         test: /\.scss$/,
         use: [
@@ -47,13 +54,21 @@ module.exports = {
         ],
       },
 
-      // Images
+      {
+        test: /\.less$/,
+        use: [
+          isDev ? "style-loader" : MiniCssExtractPlugin.loader,
+          "css-loader",
+          "postcss-loader",
+          "less-loader",
+        ],
+      },
+
       {
         test: /\.(png|jpe?g|gif|svg|webp|avif)$/i,
         type: "asset/resource",
       },
 
-      // Fonts
       {
         test: /\.(woff2?|ttf|otf|eot)$/i,
         type: "asset/resource",
@@ -67,6 +82,10 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: "./src/index.html",
+    }),
+
+    new ESLintPlugin({
+      extensions: ["js", "ts"],
     }),
 
     new CopyPlugin({
@@ -85,6 +104,8 @@ module.exports = {
             filename: "css/[name].[contenthash:8].css",
           }),
         ]),
+
+    ...(isAnalyze ? [new BundleAnalyzerPlugin()] : []),
   ],
 
   optimization: {
